@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.18;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+
+contract Event_Token is ERC20, Ownable {
+    enum Chamber { SILVER, GOLD, DIAMOND }
+
+    event TicketRedeemed(address indexed account, Chamber chamber, uint256 ticketCost);
+
+    mapping(address => Chamber) public userSelectedChambers;
+
+    uint256 public constant Silver_Cost = 100;
+    uint256 public constant Gold_Cost = 200;
+    uint256 public constant Diamond_Cost = 500;
+
+    constructor(address initialOwner) ERC20("Event_Token", "ET") Ownable(initialOwner) {}
+
+    function mint(address to, uint256 total) public onlyOwner {
+        _mint(to, total);
+    }
+
+    function burn(uint256 total) public {
+        require(total > 0, "The total to destroy must be greater than zero");
+        require(balanceOf(msg.sender) >= total, "Insufficient funds for token destruction");
+        _burn(msg.sender, total);
+    }
+
+    function redeemTicket(uint8 chamberNumber) public {
+        Chamber chamber;
+
+        require(chamberNumber >= 1 && chamberNumber <= 3, "Invalid chamber number");
+
+        uint256 ticketCost;
+
+        if (chamberNumber == 1) {
+            require(balanceOf(msg.sender) >= Silver_Cost, "Insufficient funds for ticket redemption");
+            chamber = Chamber.SILVER;
+            ticketCost = Silver_Cost;
+            _burn(msg.sender, ticketCost);
+        } else if (chamberNumber == 2) {
+            require(balanceOf(msg.sender) >= Gold_Cost, "Insufficient funds for ticket redemption");
+            chamber = Chamber.GOLD;
+            ticketCost = Gold_Cost;
+            _burn(msg.sender, ticketCost);
+        } else {
+            require(balanceOf(msg.sender) >= Diamond_Cost, "Insufficient funds for ticket redemption");
+            chamber = Chamber.DIAMOND;
+            ticketCost = Diamond_Cost;
+            _burn(msg.sender, ticketCost);
+        }
+
+        userSelectedChambers[msg.sender] = chamber;
+        emit TicketRedeemed(msg.sender, chamber, ticketCost);
+    }
+
+    function transferTokens(address user, uint256 total) external {
+        require(user != address(0), "Invalid user address provided");
+        require(balanceOf(msg.sender) >= total, "Insufficient funds for token transfer");
+        _transfer(msg.sender, user, total);
+    }
+
+    function getTicketCost(uint8 chamberNumber) external pure returns (uint256) {
+        require(chamberNumber >= 1 && chamberNumber <= 3, "Invalid chamber number");
+
+        if (chamberNumber == 1) {
+            return Silver_Cost;
+        } else if (chamberNumber == 2) {
+            return Gold_Cost;
+        } else {
+            return Diamond_Cost;
+        }
+    }
+}
